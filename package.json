@@ -1,0 +1,8 @@
+{
+  "name": "project-com-myyscm-sensor_ht-hsd01",
+  "version": "1.0.53",
+  "scripts": {
+    "start": "node ../../bin/runProject.js com.myyscm.sensor_ht.hsd01"
+  },
+  "dependencies": {}
+}

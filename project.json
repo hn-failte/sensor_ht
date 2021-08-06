@@ -1,0 +1,11 @@
+{ 
+        "package_path": "com.myyscm.sensor_ht.hsd01",
+        "min_sdk_api_level":10053,
+        "developer_id": "",
+        "version_code":1,
+        "create_timestamp": "1628237367111",
+        "entrance_scene":{
+            "action_ids":[],
+            "trigger_ids":[]
+        }
+    }
