@@ -4,5 +4,9 @@
   "scripts": {
     "start": "node ../../bin/runProject.js com.myyscm.sensor_ht.hsd01"
   },
-  "dependencies": {}
+  "dependencies": {
+    "dayjs": "^1.10.6",
+    "qs": "^6.10.1",
+    "whatwg-fetch": "^3.6.2"
+  }
 }

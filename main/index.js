@@ -10,7 +10,6 @@ import NavigationBar from 'miot/ui/NavigationBar';
 import Protocol from '../resources/protocol';
 
 export default class App extends React.Component {
-
   constructor(props) {
     super(props);
 
@@ -54,53 +53,82 @@ export default class App extends React.Component {
    * 检查是否需要弹出隐私协议弹出
    */
   checkToAlertLegalInformationAuthorization() {
-    Service.smarthome.batchGetDeviceDatas([{ did: Device.deviceID, props: ["prop.s_auth_config"] }]).then((res) => {
-      let alreadyAuthed = true;
-      let result = res[Device.deviceID];
-      let config;
-      if (result && result['prop.s_auth_config']) {
-        config = result['prop.s_auth_config'];
-      }
-      if (config) {
-        try {
-          let authJson = JSON.parse(config);
-          alreadyAuthed = authJson.privacyAuthed && true;
-        } catch (err) {
-          // json解析失败，不处理
+    Service.smarthome
+      .batchGetDeviceDatas([
+        { did: Device.deviceID, props: ['prop.s_auth_config'] }
+      ])
+      .then((res) => {
+        let alreadyAuthed = true;
+        let result = res[Device.deviceID];
+        let config;
+        if (result && result['prop.s_auth_config']) {
+          config = result['prop.s_auth_config'];
         }
-      } else {
-        alreadyAuthed = false;
-      }
-      if (alreadyAuthed) {
-        return;
-      }
-      // 需要弹出隐私弹出
-      this.alertLegalInformationAuthorization();
-
-    }).catch((error) => {
-      Service.smarthome.reportLog(Device.model, `Service.smarthome.batchGetDeviceDatas error: ${ JSON.stringify(error) }`);
-    });
+        if (config) {
+          try {
+            let authJson = JSON.parse(config);
+            alreadyAuthed = authJson.privacyAuthed && true;
+          } catch (err) {
+            // json解析失败，不处理
+          }
+        } else {
+          alreadyAuthed = false;
+        }
+        if (alreadyAuthed) {
+          return;
+        }
+        // 需要弹出隐私弹出
+        this.alertLegalInformationAuthorization();
+      })
+      .catch((error) => {
+        Service.smarthome.reportLog(
+          Device.model,
+          `Service.smarthome.batchGetDeviceDatas error: ${JSON.stringify(
+            error
+          )}`
+        );
+      });
   }
 
   /**
    * 弹出隐私弹窗
    */
   alertLegalInformationAuthorization() {
-
-    Protocol.getProtocol().then((protocol) => {
-      Host.ui.alertLegalInformationAuthorization(protocol).then((res) => {
-        if (res === 'ok' || res === true || res === 'true') {
-          Service.smarthome.batchSetDeviceDatas([{ did: Device.deviceID, props: { "prop.s_auth_config": JSON.stringify({ 'privacyAuthed': true }) } }]);
-          PackageEvent.packageAuthorizationAgreed.emit();
-        }
-      }).catch((error) => {
-        // 打开弹出过程中出现了意外错误, 进行上报
-        Service.smarthome.reportLog(Device.model, `Host.ui.alertLegalInformationAuthorization error: ${ JSON.stringify(error) }`);
+    Protocol.getProtocol()
+      .then((protocol) => {
+        Host.ui
+          .alertLegalInformationAuthorization(protocol)
+          .then((res) => {
+            if (res === 'ok' || res === true || res === 'true') {
+              Service.smarthome.batchSetDeviceDatas([
+                {
+                  did: Device.deviceID,
+                  props: {
+                    'prop.s_auth_config': JSON.stringify({
+                      privacyAuthed: true
+                    })
+                  }
+                }
+              ]);
+              PackageEvent.packageAuthorizationAgreed.emit();
+            }
+          })
+          .catch((error) => {
+            // 打开弹出过程中出现了意外错误, 进行上报
+            Service.smarthome.reportLog(
+              Device.model,
+              `Host.ui.alertLegalInformationAuthorization error: ${JSON.stringify(
+                error
+              )}`
+            );
+          });
+      })
+      .catch((error) => {
+        Service.smarthome.reportLog(
+          Device.model,
+          `Service.getServerName() error: ${JSON.stringify(error)}`
+        );
       });
-    }).catch((error) => {
-      Service.smarthome.reportLog(Device.model, `Service.getServerName() error: ${ JSON.stringify(error) }`);
-    });
-
   }
 }
 
@@ -116,7 +144,6 @@ function createRootStack(initPage) {
     {
       initialRouteName: initPage,
       navigationOptions: ({ navigation }) => {
-
         let { titleProps, title } = navigation.state.params || {};
         // 如果 titleProps和title 都为空， 则不显示页面header部分
         if (!titleProps && !title) return { header: null };
@@ -174,8 +201,12 @@ function interpolator(props) {
     const isBack = !scenes[lastSceneIndexInScenes].isActive;
 
     if (isBack) {
-      const currentSceneIndexInScenes = scenes.findIndex((item) => item === scene);
-      const targetSceneIndexInScenes = scenes.findIndex((item) => item.isActive);
+      const currentSceneIndexInScenes = scenes.findIndex(
+        (item) => item === scene
+      );
+      const targetSceneIndexInScenes = scenes.findIndex(
+        (item) => item.isActive
+      );
       const targetSceneIndex = scenes[targetSceneIndexInScenes].index;
       const lastSceneIndex = scenes[lastSceneIndexInScenes].index;
 
