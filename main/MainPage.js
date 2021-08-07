@@ -4,17 +4,15 @@ import {
   Package,
   Host,
   Device,
-  // DeviceEvent,
+  DeviceEvent,
   PackageEvent,
   Service
 } from 'miot';
 import { View, ScrollView, Text, Button, TextInput } from 'react-native';
-import { fetch as request } from 'whatwg-fetch';
 import NavigationBar from 'miot/ui/NavigationBar';
 import Separator from 'miot/ui/Separator';
 import { strings as SdkStrings } from 'miot/resources';
 import dayjs from 'dayjs';
-import qs from 'qs';
 import { getDeviceDataWithTime } from './actions';
 import {
   OBJECT_ID_MAP,
@@ -22,6 +20,7 @@ import {
   HUMAN_SENSOR_DEVICE_INFO
 } from './const';
 import { hex2int } from './utils';
+import { post } from './request';
 import styles from './styles';
 
 const TEMP = hex2int(OBJECT_ID_MAP.TEMP);
@@ -57,7 +56,10 @@ export default class MainPage extends Component {
         server: 'http://10.0.0.4:8080',
         syncTemp: '/t',
         syncLight: '/l',
-        syncPersion: '/p'
+        syncPersion: '/p',
+        limit: 10,
+        pullInterval: 30,
+        syncInterval: 30
       },
       status: {
         pull: false,
@@ -119,9 +121,25 @@ export default class MainPage extends Component {
         console.log('user agree protocol...');
       }
     );
+    // 使用subscribeMessages()接口订阅产品的属性
+    // Device.getDeviceWifi()
+    //   .subscribeMessages('prop.1.1')
+    //   .then((subcription) => {
+    //     this.subcription = subcription;
+    //   })
+    //   .catch((error) => {});
+    // // 添加监听事件，若产品的属性发生变化，会发送事件到js，此处会收到监听回调
+    // this.deviceReceivedMessages = DeviceEvent.deviceReceivedMessages.addListener(
+    //   (device, map, data) => {
+    //     console.log('Device.addListener', device, map, data);
+    //   }
+    // );
   }
 
-  refreshDeviceData = () => {
+  /**
+   * 获取相关设备最新的数据
+   */
+  getLatestData = () => {
     this.getTempAndHumi(TEMP_HUMI_DEVICE_INFO.deviceId);
     this.getEnvMove(HUMAN_SENSOR_DEVICE_INFO.deviceId);
   };
@@ -132,8 +150,11 @@ export default class MainPage extends Component {
   startPull = () => {
     console.log('startPull');
     if (this.loopPull) return;
-    this.refreshDeviceData();
-    this.loopPull = setInterval(this.refreshDeviceData, 30000);
+    this.getLatestData();
+    this.loopPull = setInterval(
+      this.getLatestData,
+      this.state.config.pullInterval * 1000
+    );
     this.setState((state) => {
       state.status = { ...state.status, pull: true };
       return state;
@@ -165,63 +186,24 @@ export default class MainPage extends Component {
     const [tempItem] = temperatureHistory;
     const [moveItem] = moveHistory;
     const [lightItem] = lightHistory;
-    request(`${config.server}${config.syncTemp}`, {
-      type: 'post',
-      body: JSON.stringify({
-        temp: tempItem.value,
-        time: tempItem.time
-      })
-    })
-      .then((response) => {
-        if (response.status >= 200 && response.status < 300) {
-          return response;
-        } else {
-          var error = new Error(response.statusText);
-          error.response = response;
-          throw error;
-        }
-      })
-      .then((res) => {
-        console.log(res);
-      });
-    request(`${config.server}${config.syncPersion}`, {
-      type: 'post',
-      body: JSON.stringify({
-        is_someone_here: moveItem.value,
-        time: moveItem.time
-      })
-    })
-      .then((response) => {
-        if (response.status >= 200 && response.status < 300) {
-          return response;
-        } else {
-          var error = new Error(response.statusText);
-          error.response = response;
-          throw error;
-        }
-      })
-      .then((res) => {
-        console.log(res);
-      });
-    request(`${config.server}${config.syncLight}`, {
-      type: 'post',
-      body: JSON.stringify({
-        light: lightItem.value,
-        time: lightItem.time
-      })
-    })
-      .then((response) => {
-        if (response.status >= 200 && response.status < 300) {
-          return response;
-        } else {
-          var error = new Error(response.statusText);
-          error.response = response;
-          throw error;
-        }
-      })
-      .then((res) => {
-        console.log(res);
-      });
+    post(`${config.server}${config.syncTemp}`, {
+      temp: tempItem.value,
+      time: tempItem.time
+    }).then((res) => {
+      console.log('syncTemp', res);
+    });
+    post(`${config.server}${config.syncPersion}`, {
+      is_someone_here: moveItem.value,
+      time: moveItem.time
+    }).then((res) => {
+      console.log('syncPersion', res);
+    });
+    post(`${config.server}${config.syncLight}`, {
+      light: lightItem.value,
+      time: lightItem.time
+    }).then((res) => {
+      console.log('syncLight', res);
+    });
   };
 
   /**
@@ -231,7 +213,10 @@ export default class MainPage extends Component {
     console.log('startSync');
     if (this.loopSync) return;
     this.syncData();
-    this.loopSync = setInterval(this.syncData, 30000);
+    this.loopSync = setInterval(
+      this.syncData,
+      this.state.config.syncInterval * 1000
+    );
     this.setState((state) => {
       state.status = { ...state.status, sync: true };
       return state;
@@ -287,7 +272,7 @@ export default class MainPage extends Component {
       result = parseInt(val);
     }
 
-    if (+item.key === TEMP) return result / 10;
+    if (+item.key === TEMP) return String(result / 10);
     else if (+item.key === HUMI) return result / 10;
     return result;
   }
@@ -337,7 +322,7 @@ export default class MainPage extends Component {
       time_start: now,
       time_end: end,
       group: 'hour',
-      limit: 10
+      limit: this.state.config.limit
     });
 
     const data = tData.map((tItem) => ({
@@ -373,7 +358,7 @@ export default class MainPage extends Component {
       time_start: now,
       time_end: end,
       group: 'hour',
-      limit: 10
+      limit: this.state.config.limit
     });
 
     const data = tData.map((tItem) => ({
@@ -401,12 +386,12 @@ export default class MainPage extends Component {
     return (
       <ScrollView style={styles.container}>
         <Text style={styles.textTitle}>{'黝黑蜗牛智能硬件中枢'}</Text>
-        <Text style={styles.center}>{`定时拉取：${
-          status.pull ? '开' : '关'
-        }`}</Text>
-        <Text style={styles.center}>{`定时同步：${
-          status.sync ? '开' : '关'
-        }`}</Text>
+        <Text style={styles.center}>{`定时拉取(${
+          this.state.config.pullInterval
+        }s)：${status.pull ? '开' : '关'}`}</Text>
+        <Text style={styles.center}>{`定时同步(${
+          this.state.config.syncInterval
+        }s)：${status.sync ? '开' : '关'}`}</Text>
         <View style={styles.opContainer}>
           <View style={styles.opButton}>
             <Button onPress={this.startPull} title={'开始定时拉取设备数据'} />
@@ -429,7 +414,13 @@ export default class MainPage extends Component {
             {temperatureHistory.length ? '温度' : ''}
           </Text>
           {temperatureHistory.map((temp) => (
-            <Text style={styles.center} key={temp.time}>
+            <Text
+              style={{
+                ...styles.center,
+                color: temp.value > 26 ? `black` : `red`
+              }}
+              key={temp.time}
+            >
               {temp.value + '°C ---- ' + temp.time}
             </Text>
           ))}
@@ -449,7 +440,10 @@ export default class MainPage extends Component {
             {moveHistory.length ? '是否有人' : ''}
           </Text>
           {moveHistory.map((move) => (
-            <Text style={styles.center} key={move.time}>
+            <Text
+              style={{ ...styles.center, color: move.value ? `black` : `red` }}
+              key={move.time}
+            >
               {(move.value ? move.value + '秒无人移动' : '有人移动') +
                 ' ---- ' +
                 move.time}
@@ -461,21 +455,18 @@ export default class MainPage extends Component {
             {lightHistory.length ? '光照强弱' : ''}
           </Text>
           {lightHistory.map((light) => (
-            <Text style={styles.center} key={light.time}>
+            <Text
+              style={{ ...styles.center, color: light.value ? `red` : `black` }}
+              key={light.time}
+            >
               {(light.value ? '光照强' : '光照弱') + ' ---- ' + light.time}
             </Text>
           ))}
         </View>
         <Separator />
         <View style={styles.debugInfo}>
-          <Text>修改后台同步地址</Text>
           <TextInput
-            style={{
-              borderColor: `gray`,
-              borderWidth: 1,
-              borderStyle: `solid`
-            }}
-            placeholder={this.state.config.server}
+            placeholder={'修改后台同步地址'}
             onChangeText={(text) => {
               this.setState((state) => {
                 return {
@@ -488,6 +479,51 @@ export default class MainPage extends Component {
             当前后台同步地址：{this.state.config.server}
           </Text>
           <Text style={styles.textStyle}>当前设备:{Device.name}</Text>
+          <TextInput
+            placeholder={'修改最新数据条数展示'}
+            onChangeText={(value) => {
+              this.setState((state) => {
+                return {
+                  config: Object.assign({}, state.config, {
+                    limit: /^\d+$/.test(value) ? +value : 30
+                  })
+                };
+              });
+            }}
+          />
+          <Text style={styles.textStyle}>
+            展示最新{this.state.config.limit}条数据
+          </Text>
+          <TextInput
+            placeholder={'拉取设备数据间隔(s)'}
+            onChangeText={(value) => {
+              this.setState((state) => {
+                return {
+                  config: Object.assign({}, state.config, {
+                    pullInterval: /^\d+$/.test(value) ? +value : 30
+                  })
+                };
+              });
+            }}
+          />
+          <Text style={styles.textStyle}>
+            每隔{this.state.config.pullInterval}s拉取一次
+          </Text>
+          <TextInput
+            placeholder={'同步设备数据间隔(s)'}
+            onChangeText={(value) => {
+              this.setState((state) => {
+                return {
+                  config: Object.assign({}, state.config, {
+                    syncInterval: /^\d+$/.test(value) ? +value : 30
+                  })
+                };
+              });
+            }}
+          />
+          <Text style={styles.textStyle}>
+            每隔{this.state.config.syncInterval}s同步一次
+          </Text>
           <Text style={styles.textStyle}>
             设备类型:{this.state.specInfo.type}
           </Text>
@@ -524,5 +560,8 @@ export default class MainPage extends Component {
   componentWillUnmount() {
     // 取消监听
     this.packageAuthorizationAgreed && this.packageAuthorizationAgreed.remove();
+    // 完成产品属性的订阅后，若开发者退出扩展程序的界面，需释放已调用的资源，如取消订阅或取消监听
+    this.subcription && this.subcription.remove(); // 取消订阅
+    this.deviceReceivedMessages && this.deviceReceivedMessages.remove(); // 取消监听
   }
 }
