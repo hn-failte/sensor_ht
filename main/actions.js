@@ -34,7 +34,7 @@ export const getDeviceData = async (params) => {
   return Service.smarthome
     .batchGetDeviceDatas(params)
     .then((res) => {
-      console.log('getDeviceData_res', res);
+      console.log('getDeviceData-res:', res);
       return res;
     })
     .catch((err) => {
@@ -50,7 +50,7 @@ export const doSpecAction = (params) => {
   return Service.spec
     .doAction(params)
     .then((res) => {
-      console.log('res', res);
+      console.log('doSpecAction-res:', res);
     })
     .catch((error) => {
       console.log('error', error);
@@ -69,7 +69,7 @@ export const doBLEAction = (params) => {
   return Bluetooth.spec
     .doAction(mac, data)
     .then((res) => console.log(JSON.stringify(res)))
-    .catch((err) => console.log(JSON.stringify(err)));
+    .catch((err) => console.log('err', err));
 };
 
 export const getDeviceProp = (params) => {
@@ -78,7 +78,7 @@ export const getDeviceProp = (params) => {
     Service.spec
       .getPropertiesValue(params)
       .then((res) => {
-        console.log('res', res);
+        console.log('getDeviceProp-res:', res);
       })
       .catch((error) => {
         console.log('error', error);

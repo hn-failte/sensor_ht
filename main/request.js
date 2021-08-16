@@ -4,16 +4,14 @@ import qs from 'qs';
 export const request = (type, url, data) =>
   fetchPolyfill(`${url}?${type === 'get' ? qs.stringify(data) : ''}`, {
     method: type,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: type == 'post' && data ? JSON.stringify(data) : ''
+    body: type === 'post' && data ? JSON.stringify(data) : ''
   }).then((response) => {
-    console.log(
-      '🚀 ~ file: request.js ~ line 13 ~ fetchPolyfill ~ response',
-      response,
-      data
-    );
+    console.log('fetch-data:', data);
+    console.log('fetch-response:', response);
     if (response.status >= 200 && response.status < 300) {
       return response;
     } else {

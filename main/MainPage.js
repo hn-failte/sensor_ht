@@ -53,13 +53,13 @@ export default class MainPage extends Component {
       specInfo: {},
       specValue: {},
       config: {
-        server: 'http://10.0.0.4:8080',
+        server: 'http://10.0.0.5:8080/api',
         syncTemp: '/t',
         syncLight: '/l',
         syncPersion: '/p',
-        limit: 10,
-        pullInterval: 30,
-        syncInterval: 30
+        limit: 5,
+        pullInterval: 10,
+        syncInterval: 10
       },
       status: {
         pull: false,
@@ -332,16 +332,12 @@ export default class MainPage extends Component {
     }));
     const temperatureHistory = data.filter((item) => +item.key === TEMP);
     const humidityHistory = data.filter((item) => +item.key === HUMI);
-    console.log(
-      'temperatureHistory, humidityHistory',
-      temperatureHistory,
-      humidityHistory
-    );
+    console.log('temperatureHistory', temperatureHistory);
+    console.log('humidityHistory', humidityHistory);
     this.setState({
       temperatureHistory,
       humidityHistory
     });
-    console.log('getTempAndHumi', data);
   };
 
   /**
@@ -444,7 +440,7 @@ export default class MainPage extends Component {
               style={{ ...styles.center, color: move.value ? `black` : `red` }}
               key={move.time}
             >
-              {(move.value ? move.value + '秒无人移动' : '有人移动') +
+              {(move.value ? `已有${move.value}秒以上无人移动` : '有人移动') +
                 ' ---- ' +
                 move.time}
             </Text>
